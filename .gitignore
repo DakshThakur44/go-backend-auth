@@ -1,0 +1,20 @@
+# SQLite Database Files
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Compiled Binaries
+/server
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Environment & Secret Files
+.env
+*.env
+
+# IDE / Editor Configurations
+.vscode/
+.idea/

@@ -1,0 +1,76 @@
+openapi: 3.0.3
+info:
+  title: Auth Backend API
+  description: Production-ready authentication service using GORM, SQLite, and Gin.
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local Server
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: student@college.edu
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 64
+                  example: Password123!
+      responses:
+        '201':
+          description: Registered successfully
+        '409':
+          description: Email already registered
+
+  /auth/login:
+    post:
+      summary: Authenticate user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: student@college.edu
+                password:
+                  type: string
+                  example: Password123!
+      responses:
+        '200':
+          description: Login successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: refresh_token=rt_1234; Path=/; HttpOnly
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                    example: Bearer
+                  expires_in:
+                    type: integer
+                    example: 900
+        '401':
+          description: Invalid email or password
