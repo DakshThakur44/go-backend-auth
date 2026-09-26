@@ -39,7 +39,6 @@ func (s *Session) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
-// RefreshToken entity table
 type RefreshToken struct {
 	Token     string    `gorm:"primaryKey" json:"token"`
 	SessionID string    `gorm:"not null;index" json:"session_id"`
@@ -49,8 +48,6 @@ type RefreshToken struct {
 	ExpiresAt time.Time `gorm:"not null" json:"expires_at"`
 	CreatedAt time.Time `json:"created_at"`
 }
-
-// --- Request DTOs ---
 
 type RegisterRequest struct {
 	Email    string `json:"email" binding:"required,email"`

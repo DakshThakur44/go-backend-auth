@@ -2,9 +2,11 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
+	"github.com/alitto/pond"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -15,11 +17,12 @@ import (
 )
 
 type AuthHandler struct {
-	DB *gorm.DB
+	DB   *gorm.DB
+	Pool *pond.WorkerPool
 }
 
-func NewAuthHandler(db *gorm.DB) *AuthHandler {
-	return &AuthHandler{DB: db}
+func NewAuthHandler(db *gorm.DB, pool *pond.WorkerPool) *AuthHandler {
+	return &AuthHandler{DB: db, Pool: pool}
 }
 
 func (h *AuthHandler) Register(c *gin.Context) {
@@ -50,6 +53,14 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create user"})
 		return
 	}
+	if h.Pool != nil {
+		email := newUser.Email
+		userID := newUser.ID
+		h.Pool.Submit(func() {
+			time.Sleep(2 * time.Second)
+			log.Printf("[ASYNC WORKER] Welcome email sent to %s (User ID: %s)", email, userID)
+		})
+	}
 
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "User registered successfully",
@@ -58,13 +69,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 }
 
 func (h *AuthHandler) Login(c *gin.Context) {
+	time.Sleep(2 * time.Second)
 	var req models.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Verify user credentials
 	var user models.User
 	if err := h.DB.Where("email = ?", req.Email).First(&user).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -80,7 +91,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Create parent Session
 	session := models.Session{
 		UserID:    user.ID,
 		UserAgent: c.Request.UserAgent(),
@@ -92,7 +102,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Create Refresh Token
 	refreshTokenStr := "rt_" + uuid.NewString()
 	refreshToken := models.RefreshToken{
 		Token:     refreshTokenStr,
@@ -105,7 +114,6 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	// Issue Access Token
 	accessToken, err := auth.GenerateAccessToken(user.ID, user.Email)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
